@@ -2,6 +2,10 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
 
 const WC = new WooCommerceRestApi({
@@ -20,61 +24,63 @@ const server = new Server({
   }
 });
 
-server.setRequestHandler('tools/list', async () => ({
-  tools: [
-    {
-      name: 'get_products',
-      description: 'Get WooCommerce products',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          per_page: { type: 'number', default: 10, maximum: 100 },
-          search: { type: 'string' },
-          category: { type: 'number' },
-          status: { type: 'string', enum: ['draft', 'pending', 'private', 'publish'] }
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: 'get_products',
+        description: 'Get WooCommerce products',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            per_page: { type: 'number', default: 10, maximum: 100 },
+            search: { type: 'string' },
+            category: { type: 'number' },
+            status: { type: 'string', enum: ['draft', 'pending', 'private', 'publish'] }
+          }
+        }
+      },
+      {
+        name: 'get_product',
+        description: 'Get a single product by ID',
+        inputSchema: {
+          type: 'object',
+          properties: { id: { type: 'number' } },
+          required: ['id']
+        }
+      },
+      {
+        name: 'update_product',
+        description: 'Update product information',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'number' },
+            name: { type: 'string' },
+            description: { type: 'string' },
+            short_description: { type: 'string' },
+            regular_price: { type: 'string' },
+            sale_price: { type: 'string' },
+            status: { type: 'string', enum: ['draft', 'pending', 'private', 'publish'] }
+          },
+          required: ['id']
+        }
+      },
+      {
+        name: 'get_categories',
+        description: 'Get product categories',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            per_page: { type: 'number', default: 100 }
+          }
         }
       }
-    },
-    {
-      name: 'get_product',
-      description: 'Get a single product by ID',
-      inputSchema: {
-        type: 'object',
-        properties: { id: { type: 'number' } },
-        required: ['id']
-      }
-    },
-    {
-      name: 'update_product',
-      description: 'Update product information',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          id: { type: 'number' },
-          name: { type: 'string' },
-          description: { type: 'string' },
-          short_description: { type: 'string' },
-          regular_price: { type: 'string' },
-          sale_price: { type: 'string' },
-          status: { type: 'string', enum: ['draft', 'pending', 'private', 'publish'] }
-        },
-        required: ['id']
-      }
-    },
-    {
-      name: 'get_categories',
-      description: 'Get product categories',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          per_page: { type: 'number', default: 100 }
-        }
-      }
-    }
-  ]
-}));
+    ]
+  };
+});
 
-server.setRequestHandler('tools/call', async (request) => {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   try {
