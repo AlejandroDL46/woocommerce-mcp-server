@@ -1,9 +1,19 @@
 #!/usr/bin/env node
 
-console.error('Starting WooCommerce MCP Server...');
-
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import WooCommerceRestApi from '@woocommerce/woocommerce-rest-api';
+
+const WC = new WooCommerceRestApi({
+  url: process.env.WORDPRESS_SITE_URL,
+  consumerKey: process.env.WOOCOMMERCE_CONSUMER_KEY,
+  consumerSecret: process.env.WOOCOMMERCE_CONSUMER_SECRET,
+  version: 'wc/v3'
+});
 
 const server = new Server(
   {
@@ -17,9 +27,7 @@ const server = new Server(
   }
 );
 
-// Lista de herramientas
-server.setRequestHandler('tools/list', async () => {
-  console.error('Tools list requested');
+server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
@@ -28,36 +36,72 @@ server.setRequestHandler('tools/list', async () => {
         inputSchema: {
           type: 'object',
           properties: {
-            per_page: { type: 'number', default: 5 }
+            per_page: { type: 'number', default: 10 },
+            search: { type: 'string' },
+            status: { type: 'string' }
           }
+        }
+      },
+      {
+        name: 'update_product',
+        description: 'Update a WooCommerce product',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id: { type: 'number' },
+            name: { type: 'string' },
+            regular_price: { type: 'string' },
+            description: { type: 'string' },
+            status: { type: 'string' }
+          },
+          required: ['id']
         }
       }
     ]
   };
 });
 
-// Llamadas a herramientas
-server.setRequestHandler('tools/call', async (request) => {
-  console.error(`Tool called: ${request.params.name}`);
-  
-  return {
-    content: [
-      {
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    switch (name) {
+      case 'get_products':
+        const products = await WC.get('products', args);
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(products.data, null, 2)
+          }]
+        };
+
+      case 'update_product':
+        const { id, ...updateData } = args;
+        const updated = await WC.put(`products/${id}`, updateData);
+        return {
+          content: [{
+            type: 'text',
+            text: `Product updated: ${JSON.stringify(updated.data, null, 2)}`
+          }]
+        };
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+  } catch (error) {
+    return {
+      content: [{
         type: 'text',
-        text: 'WooCommerce server is working! API connection would go here.'
-      }
-    ]
-  };
+        text: `Error: ${error.message}`
+      }],
+      isError: true
+    };
+  }
 });
 
 async function main() {
-  console.error('Connecting server...');
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Server connected!');
 }
 
-main().catch((error) => {
-  console.error('Error:', error);
-  process.exit(1);
-});
+main().catch(console.error);
