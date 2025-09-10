@@ -2,22 +2,9 @@
   "name": "woocommerce-mcp-server",
   "version": "1.0.0",
   "type": "module",
-  "description": "MCP server for WooCommerce integration",
   "main": "src/index.js",
-  "bin": {
-    "woocommerce-mcp-server": "./src/index.js"
-  },
-  "scripts": {
-    "start": "node src/index.js"
-  },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "latest",
-    "@woocommerce/woocommerce-rest-api": "latest"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": ["mcp", "woocommerce", "api", "claude"],
-  "author": "AlejandroDL46",
-  "license": "MIT"
+    "@modelcontextprotocol/sdk": "^0.5.0",
+    "@woocommerce/woocommerce-rest-api": "^1.4.1"
+  }
 }
